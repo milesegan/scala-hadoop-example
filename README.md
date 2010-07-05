@@ -13,6 +13,8 @@ I chopped out the extra argument parsing logic that was in the java
 example because I think it just obscures the point of the example. Adding
 it back to the scala version is left as an exercise for the reader.
 
+*Note: this example requires Scala 2.8.*
+
 # running the scala WordCount example
 1. install hadoop and make sure the hadoop script is on your path
 2. install scala and make sure scalac is on your path

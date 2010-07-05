@@ -4,6 +4,7 @@ import org.apache.hadoop.conf.{Configuration,Configured}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{IntWritable,LongWritable,Text}
 import org.apache.hadoop.util.{Tool,ToolRunner}
+import scala.collection.JavaConversions._
 
 // This class performs the map operation, translating raw input into the key-value
 // pairs we will feed into our reduce operation.
@@ -24,10 +25,7 @@ class MapClass extends MapReduceBase with Mapper[LongWritable,Text,Text,IntWrita
 // calculate a simple total for each word seen.
 class Reduce extends MapReduceBase with Reducer[Text,IntWritable,Text,IntWritable] {
   def reduce(key:Text, values:Iterator[IntWritable], output:OutputCollector[Text,IntWritable], reporter:Reporter) = {
-    var sum = 0
-    while (values.hasNext) {
-      sum += values.next.get
-    }
+    val sum = values.foldLeft(0) { (t,i) => t + i.get }
     output.collect(key, new IntWritable(sum))
   }
 }
