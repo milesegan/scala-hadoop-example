@@ -1,21 +1,26 @@
-import java.util.Iterator
-import org.apache.hadoop.mapred._
-import org.apache.hadoop.conf.{Configuration,Configured}
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.io.{IntWritable,LongWritable,Text}
-import org.apache.hadoop.util.{Tool,ToolRunner}
+import org.apache.hadoop.io.IntWritable
+import org.apache.hadoop.io.Text
+import org.apache.hadoop.mapreduce.Job
+import org.apache.hadoop.mapreduce.Mapper
+import org.apache.hadoop.mapreduce.Reducer
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
+import org.apache.hadoop.util.GenericOptionsParser
 import scala.collection.JavaConversions._
 
 // This class performs the map operation, translating raw input into the key-value
 // pairs we will feed into our reduce operation.
-class MapClass extends MapReduceBase with Mapper[LongWritable,Text,Text,IntWritable] {
+class TokenizerMapper extends Mapper[Object,Text,Text,IntWritable] {
   val one = new IntWritable(1)
   val word = new Text
   
-  def map(key:LongWritable, value:Text, output:OutputCollector[Text,IntWritable], reporter:Reporter) = {
+  override
+  def map(key:Object, value:Text, context:Mapper[Object,Text,Text,IntWritable]#Context) = {
     for (t <-  value.toString().split("\\s")) {
       word.set(t)
-      output.collect(word, one)
+      context.write(word, one)
     }
   }
 }
@@ -23,37 +28,35 @@ class MapClass extends MapReduceBase with Mapper[LongWritable,Text,Text,IntWrita
 // This class performs the reduce operation, iterating over the key-value pairs
 // produced by our map operation to produce a result. In this case we just
 // calculate a simple total for each word seen.
-class Reduce extends MapReduceBase with Reducer[Text,IntWritable,Text,IntWritable] {
-  def reduce(key:Text, values:Iterator[IntWritable], output:OutputCollector[Text,IntWritable], reporter:Reporter) = {
+class IntSumReducer extends Reducer[Text,IntWritable,Text,IntWritable] {
+  override
+  def reduce(key:Text, values:java.lang.Iterable[IntWritable], context:Reducer[Text,IntWritable,Text,IntWritable]#Context) = {
     val sum = values.foldLeft(0) { (t,i) => t + i.get }
-    output.collect(key, new IntWritable(sum))
+    context.write(key, new IntWritable(sum))
   }
 }
   
 // This class configures and runs the job with the map and reduce classes we've
 // specified above.
-class WordCount extends Configured with Tool {
-  
-  def run(args:Array[String]):Int = {
-    val conf = new JobConf(getConf, classOf[WordCount])
-    conf.setJobName("wordcount")
-    conf.setOutputKeyClass(classOf[Text])
-    conf.setOutputValueClass(classOf[IntWritable])
-    conf.setMapperClass(classOf[MapClass])
-    conf.setCombinerClass(classOf[Reduce])
-    conf.setReducerClass(classOf[Reduce])
-    
-    FileInputFormat.setInputPaths(conf, args(0))
-    FileOutputFormat.setOutputPath(conf, new Path(args(1)))
-        
-    JobClient.runJob(conf)
-    return 0
-  }
-}
+object WordCount {
 
-object WordCount {  
-  def main(args:Array[String]) = {
-    val res = ToolRunner.run(new Configuration(), new WordCount(), args)
-    System.exit(res)
+  def main(args:Array[String]):Int = {
+    val conf = new Configuration()
+    val otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs
+    if (otherArgs.length != 2) {
+      println("Usage: wordcount <in> <out>")
+      return 2
+    }
+    val job = new Job(conf, "word count")
+    job.setJarByClass(classOf[TokenizerMapper])
+    job.setMapperClass(classOf[TokenizerMapper])
+    job.setCombinerClass(classOf[IntSumReducer])
+    job.setReducerClass(classOf[IntSumReducer])
+    job.setOutputKeyClass(classOf[Text])
+    job.setOutputValueClass(classOf[IntWritable])
+    FileInputFormat.addInputPath(job, new Path(args(0)))
+    FileOutputFormat.setOutputPath(job, new Path((args(1))))
+    if (job.waitForCompletion(true)) 0 else 1
   }
+
 }

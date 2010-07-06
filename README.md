@@ -22,8 +22,10 @@ it back to the scala version is left as an exercise for the reader.
    the directory in which you've checked out this tutorial
 4. copy the commons-logging jar from the lib directory of the hadoop distribution to
    the directory in which you've checked out this tutorial
-4. copy the scala-library.jar jar from the lib directory of the scala distribution to
+4. copy the commons-cli jar from the lib directory of the hadoop distribution to
    the directory in which you've checked out this tutorial
-5. run the scala version of WordCount with the run.sh script included here
+5. copy the scala-library.jar jar from the lib directory of the scala distribution to
+   the directory in which you've checked out this tutorial
+6. run the scala version of WordCount with the run.sh script included here
 
 
